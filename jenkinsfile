@@ -1,122 +1,74 @@
-
-
----
-
-# Correct Jenkinsfile (clean version)
-
-Replace your Jenkinsfile with this **exact version**.
-
-:::writing{variant="standard" id="15273"}
 pipeline {
     agent any
-
     tools {
-        jdk 'jdk21'
+        jdk 'jdk17'
         nodejs 'node23'
     }
-
     environment {
         SCANNER_HOME = tool 'sonar-scanner'
-        JAVA_HOME = '/usr/lib/jvm/temurin-21-jdk-amd64'
-        PATH = "${JAVA_HOME}/bin:${env.PATH}"
+        JAVA_HOME = '/usr/lib/jvm/temurin-17-jdk-amd64'
     }
-
     stages {
-
         stage('Clean Workspace') {
             steps {
                 cleanWs()
             }
         }
-
         stage('Checkout from Git') {
             steps {
                 git 'https://github.com/tejaswaroop66/DevOps-Project-Swiggy'
             }
         }
-
-        stage('Verify Java') {
-            steps {
-                sh 'java -version'
-            }
-        }
-
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv('SonarQube') {
-                    sh """
-                    ${SCANNER_HOME}/bin/sonar-scanner \
-                    -Dsonar.projectName=Swiggy \
-                    -Dsonar.projectKey=Swiggy \
-                    -Dsonar.sources=.
-                    """
+                withSonarQubeEnv('sonar-server') {
+                    sh "$SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=Swiggy -Dsonar.projectKey=Swiggy"
                 }
             }
         }
-
         stage('Quality Gate') {
             steps {
-                waitForQualityGate abortPipeline: false
+                script {
+                    waitForQualityGate abortPipeline: false, credentialsId: 'Sonar-token'
+                }
             }
         }
-
         stage('Install Dependencies') {
             steps {
-                sh 'npm install'
+                sh "npm install"
             }
         }
-
         stage('OWASP FS Scan') {
             steps {
-                dependencyCheck additionalArguments: '''
-                --scan ./ 
-                --disableYarnAudit 
-                --disableNodeAudit
-                ''',
-                odcInstallation: 'DP-Check'
-
+                dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit', odcInstallation: 'DP-Check'
                 dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
             }
         }
-
         stage('Trivy FS Scan') {
             steps {
-                sh 'trivy fs . > trivyfs.txt'
+                sh "trivy fs . > trivyfs.txt"
             }
         }
-
-        stage('Docker Build & Push') {
+        stage('Docker Build and Push') {
             steps {
                 script {
                     withDockerRegistry(credentialsId: 'docker-creds', toolName: 'docker') {
-                        sh 'docker build -t swiggy .'
-                        sh 'docker tag swiggy teja1111/swiggy:latest'
-                        sh 'docker push teja1111/swiggy:latest'
+                        sh "docker build -t swiggy ."
+                        sh "docker tag swiggy teja1111/swiggy:latest"
+                        sh "docker push teja1111/swiggy:latest"
                     }
                 }
             }
         }
-
         stage('Trivy Image Scan') {
             steps {
-                sh 'trivy image teja1111/swiggy:latest > trivy-image-report.txt'
+                sh "trivy image teja1111/swiggy:latest > trivy.txt"
             }
         }
-
         stage('Deploy to Container') {
             steps {
-                sh '''
-                docker stop swiggy || true
-                docker rm swiggy || true
-
-                docker run -d \
-                --name swiggy \
-                -p 3000:3000 \
-                teja1111/swiggy:latest
-                '''
+                sh "docker run -d --name swiggy -p 3000:3000 teja1111/swiggy:latest"
             }
         }
-
     }
 }
-
