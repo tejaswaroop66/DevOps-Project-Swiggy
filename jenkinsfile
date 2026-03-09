@@ -1,117 +1,122 @@
+
+
+---
+
+# Correct Jenkinsfile (clean version)
+
+Replace your Jenkinsfile with this **exact version**.
+
+:::writing{variant="standard" id="15273"}
 pipeline {
-agent any
+    agent any
 
-```
-tools {
-    jdk 'jdk21'
-    nodejs 'node23'
-}
-
-environment {
-    SCANNER_HOME = tool 'sonar-scanner'
-    JAVA_HOME = '/usr/lib/jvm/temurin-21-jdk-amd64'
-    PATH = "${JAVA_HOME}/bin:${env.PATH}"
-}
-
-stages {
-
-    stage('Clean Workspace') {
-        steps {
-            cleanWs()
-        }
+    tools {
+        jdk 'jdk21'
+        nodejs 'node23'
     }
 
-    stage('Checkout from Git') {
-        steps {
-            git 'https://github.com/tejaswaroop66/DevOps-Project-Swiggy'
-        }
+    environment {
+        SCANNER_HOME = tool 'sonar-scanner'
+        JAVA_HOME = '/usr/lib/jvm/temurin-21-jdk-amd64'
+        PATH = "${JAVA_HOME}/bin:${env.PATH}"
     }
 
-    stage('Verify Java') {
-        steps {
-            sh 'java -version'
-        }
-    }
+    stages {
 
-    stage('SonarQube Analysis') {
-        steps {
-            withSonarQubeEnv('SonarQube') {
-                sh """
-                ${SCANNER_HOME}/bin/sonar-scanner \
-                -Dsonar.projectName=Swiggy \
-                -Dsonar.projectKey=Swiggy \
-                -Dsonar.sources=.
-                """
+        stage('Clean Workspace') {
+            steps {
+                cleanWs()
             }
         }
-    }
 
-    stage('Quality Gate') {
-        steps {
-            waitForQualityGate abortPipeline: false
+        stage('Checkout from Git') {
+            steps {
+                git 'https://github.com/tejaswaroop66/DevOps-Project-Swiggy'
+            }
         }
-    }
 
-    stage('Install Dependencies') {
-        steps {
-            sh 'npm install'
+        stage('Verify Java') {
+            steps {
+                sh 'java -version'
+            }
         }
-    }
 
-    stage('OWASP FS Scan') {
-        steps {
-            dependencyCheck additionalArguments: '''
-            --scan ./ 
-            --disableYarnAudit 
-            --disableNodeAudit
-            ''',
-            odcInstallation: 'DP-Check'
-
-            dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
-        }
-    }
-
-    stage('Trivy FS Scan') {
-        steps {
-            sh 'trivy fs . > trivyfs.txt'
-        }
-    }
-
-    stage('Docker Build & Push') {
-        steps {
-            script {
-                withDockerRegistry(credentialsId: 'docker-creds', toolName: 'docker') {
-
-                    sh 'docker build -t swiggy .'
-                    sh 'docker tag swiggy teja1111/swiggy:latest'
-                    sh 'docker push teja1111/swiggy:latest'
-
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('SonarQube') {
+                    sh """
+                    ${SCANNER_HOME}/bin/sonar-scanner \
+                    -Dsonar.projectName=Swiggy \
+                    -Dsonar.projectKey=Swiggy \
+                    -Dsonar.sources=.
+                    """
                 }
             }
         }
-    }
 
-    stage('Trivy Image Scan') {
-        steps {
-            sh 'trivy image teja1111/swiggy:latest > trivy-image-report.txt'
+        stage('Quality Gate') {
+            steps {
+                waitForQualityGate abortPipeline: false
+            }
         }
-    }
 
-    stage('Deploy to Container') {
-        steps {
-            sh '''
-            docker stop swiggy || true
-            docker rm swiggy || true
-
-            docker run -d \
-            --name swiggy \
-            -p 3000:3000 \
-            teja1111/swiggy:latest
-            '''
+        stage('Install Dependencies') {
+            steps {
+                sh 'npm install'
+            }
         }
+
+        stage('OWASP FS Scan') {
+            steps {
+                dependencyCheck additionalArguments: '''
+                --scan ./ 
+                --disableYarnAudit 
+                --disableNodeAudit
+                ''',
+                odcInstallation: 'DP-Check'
+
+                dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+            }
+        }
+
+        stage('Trivy FS Scan') {
+            steps {
+                sh 'trivy fs . > trivyfs.txt'
+            }
+        }
+
+        stage('Docker Build & Push') {
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: 'docker-creds', toolName: 'docker') {
+                        sh 'docker build -t swiggy .'
+                        sh 'docker tag swiggy teja1111/swiggy:latest'
+                        sh 'docker push teja1111/swiggy:latest'
+                    }
+                }
+            }
+        }
+
+        stage('Trivy Image Scan') {
+            steps {
+                sh 'trivy image teja1111/swiggy:latest > trivy-image-report.txt'
+            }
+        }
+
+        stage('Deploy to Container') {
+            steps {
+                sh '''
+                docker stop swiggy || true
+                docker rm swiggy || true
+
+                docker run -d \
+                --name swiggy \
+                -p 3000:3000 \
+                teja1111/swiggy:latest
+                '''
+            }
+        }
+
     }
-
 }
-```
 
-}
