@@ -6,8 +6,8 @@ pipeline {
     }
     environment {
         SCANNER_HOME = tool 'sonar-scanner'
-        JAVA_HOME = '/usr/lib/jvm/temurin-21-jdk-amd64/'
-        PATH = "/usr/lib/jvm/temurin-21-jdk-amd64/bin:${env.PATH}"
+        JAVA_HOME = '/usr/lib/jvm/temurin-21-jdk-amd-64'
+        PATH = "${JAVA_HOME}/bin:${env.PATH}"
     }
     stages {
         stage('Clean Workspace') {
