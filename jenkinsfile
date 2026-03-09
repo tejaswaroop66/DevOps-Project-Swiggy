@@ -1,12 +1,12 @@
 pipeline {
     agent any
     tools {
-        jdk 'jdk17'
+        jdk 'jdk21'
         nodejs 'node23'
     }
     environment {
         SCANNER_HOME = tool 'sonar-scanner'
-        JAVA_HOME = '/usr/lib/jvm/temurin-17-jdk-amd64'
+        JAVA_HOME = '/usr/lib/jvm/temurin-21-jdk-amd64/'
     }
     stages {
         stage('Clean Workspace') {
