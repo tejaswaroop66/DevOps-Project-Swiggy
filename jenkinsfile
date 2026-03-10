@@ -2,47 +2,14 @@ pipeline {
     agent any
 
     tools {
-        jdk 'jdk21'
-        nodejs 'node18'
-    }
-
-    environment {
-        SCANNER_HOME = tool 'sonar-scanner'
-        JAVA_HOME = '/usr/lib/jvm/temurin-21-jdk-amd64'
-        PATH = "${JAVA_HOME}/bin:${env.PATH}"
-        IMAGE_NAME = "teja1111/swiggy:latest"
+        nodejs "node18"
     }
 
     stages {
 
-        stage('Clean Workspace') {
+        stage('Clone Repository') {
             steps {
-                cleanWs()
-            }
-        }
-
-        stage('Checkout Code') {
-            steps {
-                git branch: 'master',
-                url: 'https://github.com/tejaswaroop66/DevOps-Project-Swiggy'
-            }
-        }
-
-        stage('SonarQube Analysis') {
-            steps {
-                withSonarQubeEnv('SonarQube') {
-                    sh """
-                    ${SCANNER_HOME}/bin/sonar-scanner \
-                    -Dsonar.projectName=Swiggy \
-                    -Dsonar.projectKey=Swiggy
-                    """
-                }
-            }
-        }
-
-        stage('Quality Gate') {
-            steps {
-                waitForQualityGate abortPipeline: false
+                git 'https://github.com/tejaswaroop66/DevOps-Project-Swiggy.git'
             }
         }
 
@@ -52,55 +19,29 @@ pipeline {
             }
         }
 
-        stage('OWASP Dependency Scan') {
+        stage('Build Application') {
             steps {
-                dependencyCheck(
-                    odcInstallation: 'DC',
-                    additionalArguments: '--scan . --nvdApiKey d655e369-6f38-4d74-8ceb-44c2c18b7ce8  --disableYarnAudit --disableNodeAudit'
-                )
-
-                dependencyCheckPublisher(
-                    pattern: '**/dependency-check-report.xml'
-                )
+                sh 'npm run build'
             }
         }
 
-        stage('Trivy File System Scan') {
+        stage('SonarQube Scan') {
             steps {
-                sh 'trivy fs . > trivyfs-report.txt'
-            }
-        }
-
-        stage('Docker Build Image') {
-            steps {
-                sh 'docker build -t swiggy .'
-            }
-        }
-
-        stage('Docker Tag Image') {
-            steps {
-                sh 'docker tag swiggy teja1111/swiggy:latest'
-            }
-        }
-
-        stage('Docker Push Image') {
-            steps {
-                withDockerRegistry(credentialsId: 'docker', url: 'https://index.docker.io/v1/') {
-                    sh 'docker push teja1111/swiggy:latest'
+                withSonarQubeEnv('sonar') {
+                    sh 'sonar-scanner'
                 }
             }
         }
 
-        stage('Trivy Image Scan') {
+        stage('Build Docker Image') {
             steps {
-                sh 'trivy image teja1111/swiggy:latest > trivyimage-report.txt'
+                sh 'docker build -t swiggy-app .'
             }
         }
 
-        stage('Deploy Container') {
+        stage('Run Container') {
             steps {
-                sh 'docker rm -f swiggy || true'
-                sh 'docker run -d --name swiggy -p 3000:3000 teja1111/swiggy:latest'
+                sh 'docker run -d -p 3001:3000 swiggy-app'
             }
         }
 
