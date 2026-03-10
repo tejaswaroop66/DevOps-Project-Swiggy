@@ -42,7 +42,7 @@ pipeline {
 
         stage('Run Container') {
             steps {
-                sh 'docker run -d -p 3001:3000 swiggy-app'
+                sh 'docker run -d -p 3002:3000 swiggy-app'
             }
         }
 
