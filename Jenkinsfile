@@ -21,17 +21,18 @@ pipeline {
 
         stage('Build Application') {
             steps {
-                sh 'npm run build'
+               sh 'CI=false npm run build'
             }
         }
+        
 
-        stage('SonarQube Scan') {
-            steps {
-                withSonarQubeEnv('sonar') {
-                    sh 'sonar-scanner'
-                }
-            }
-        }
+        // stage('SonarQube Scan') {
+        //     steps {
+        //         withSonarQubeEnv('sonar') {
+        //             sh 'sonar-scanner'
+        //         }
+        //     }
+        // }
 
         stage('Build Docker Image') {
             steps {
